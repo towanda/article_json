@@ -9,10 +9,11 @@ module ArticleJSON
           # @param [Nokogiri::HTML::Node] node
           # @param [Nokogiri::HTML::Node] caption_node
           # @param [ArticleJSON::Import::GoogleDoc::HTML::CSSAnalyzer] css_analyzer
-          def initialize(node:, caption_node:, css_analyzer:)
+          def initialize(node:, caption_node:, css_analyzer:, link_node: nil)
             @node = node
             @caption_node = caption_node
             @css_analyzer = css_analyzer
+            @link_node = link_node
 
             # Main node indicates the floating behavior
             @float_node = @node
@@ -36,12 +37,18 @@ module ArticleJSON
             super if floatable_size?
           end
 
+          def href
+            return unless @link_node
+            @link_node.at_xpath('.//a')['href']
+          end
+
           # @return [ArticleJSON::Elements::Image]
           def element
             ArticleJSON::Elements::Image.new(
               source_url: source_url,
               float: float,
-              caption: caption
+              caption: caption,
+              href: href
             )
           end
 

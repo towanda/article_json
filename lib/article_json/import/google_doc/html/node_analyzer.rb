@@ -98,6 +98,21 @@ module ArticleJSON
             @is_br = node.name == 'br' || only_includes_brs?
           end
 
+          # Check if the node is a link associated with an image. Google docs
+          # doesn't export the link of an image to html, only exports it when
+          # when the output format is PDF.
+          # https://productforums.google.com/forum/#!topic/docs/85jCFF6McsU
+          #
+          # As a workaround for this, we create a link in google doc previous to
+          # the image with the text 'image_link'
+          #
+          # #return [Boolean]
+          def image_with_link?
+            return @is_image_with_link if defined? @is_image_with_link
+            link = node.at_xpath(".//a")
+            link.text == 'image_link'
+          end
+
           # Determine the type of this node
           # The type is one of the elements supported by article_json.
           # @return [Symbol]
@@ -105,6 +120,7 @@ module ArticleJSON
             return :empty if empty?
             return :hr if hr?
             return :heading if heading?
+            return :image_with_link if image_with_link?
             return :paragraph if paragraph?
             return :list if list?
             return :text_box if text_box?

@@ -38,6 +38,7 @@ module ArticleJSON
           def parse_current_node
             case @current_node.type
             when :heading then parse_heading
+            when :image_with_link then parse_image_with_link
             when :paragraph then parse_paragraph
             when :list then parse_list
             when :image then parse_image
@@ -76,6 +77,18 @@ module ArticleJSON
                 node: @current_node.node,
                 caption_node: next_node,
                 css_analyzer: @css_analyzer
+              )
+              .element
+          end
+
+          # @return [ArticleJSON::Elements::Image]
+          def parse_image_with_link
+            ImageParser
+              .new(
+                node: next_node,
+                caption_node: next_node,
+                css_analyzer: @css_analyzer,
+                link_node: @current_node.node
               )
               .element
           end
