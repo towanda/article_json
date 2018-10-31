@@ -5,10 +5,12 @@ describe ArticleJSON::Export::HTML::Elements::Image do
     ArticleJSON::Elements::Image.new(
       source_url: '/foo/bar.jpg',
       caption: caption,
-      float: float
+      float: float,
+      href: url
     )
   end
   let(:float) { nil }
+  let(:url) { nil }
   let(:caption) { [ArticleJSON::Elements::Text.new(content: 'Foo Bar')] }
 
   describe '#export' do
@@ -43,6 +45,16 @@ describe ArticleJSON::Export::HTML::Elements::Image do
     context 'when no caption is provided' do
       let(:caption) { [] }
       let(:expected_html) { '<figure><img src="/foo/bar.jpg"></figure>' }
+      it { should eq expected_html }
+    end
+
+    context 'when the image has an href' do
+      let(:caption) { [] }
+      let(:url) { 'http://devex.com' }
+      let(:expected_html) do
+        '<a href="http://devex.com"><figure>' \
+          '<img src="/foo/bar.jpg"></figure></a>'
+      end
       it { should eq expected_html }
     end
   end
