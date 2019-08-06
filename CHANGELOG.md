@@ -1,4 +1,7 @@
 # Changelog
+## 0.3.6 - 2019/8/6
+- **Improvement** Added tags support in text_box element.
+
 ## 0.3.5 - 2018/12/12
 - **Improvements** to import and export image links from Google Docs
 - Import image `href`` from caption text using a custom tag
