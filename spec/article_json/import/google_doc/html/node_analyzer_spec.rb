@@ -9,8 +9,20 @@ describe ArticleJSON::Import::GoogleDoc::HTML::NodeAnalyzer do
 
     %w(h1 h2 h3 h4 h5).each do |header_tag|
       context "when the node is a <#{header_tag}>" do
-        let(:xml_fragment) { "<#{header_tag}>foo</#{header_tag}>" }
-        it { should be true }
+        context 'and it is neither a `Quote:` nor a `Textbox:` tag' do
+          let(:xml_fragment) { "<#{header_tag}>foo</#{header_tag}>" }
+          it { should be true }
+        end
+
+        context 'but it is a `Quote:` tag' do
+          let(:xml_fragment) { "<#{header_tag}>Quote:</#{header_tag}>" }
+          it { should be false }
+        end
+
+        context 'but it is a `Textbox:` tag' do
+          let(:xml_fragment) { "<#{header_tag}>Textbox:</#{header_tag}>" }
+          it { should be false }
+        end
       end
     end
 
@@ -72,8 +84,15 @@ describe ArticleJSON::Import::GoogleDoc::HTML::NodeAnalyzer do
     end
 
     context 'when the node has only whitespaces' do
-      let(:xml_fragment) { '<p> </p>' }
-      it { should be true }
+      context 'and no line breaks' do
+        let(:xml_fragment) { '<p> </p>' }
+        it { should be true }
+      end
+
+      context 'including line breaks' do
+        let(:xml_fragment) { '<p> <br></p>' }
+        it { should be false }
+      end
     end
 
     context 'when the node has nested spans that are empty' do
@@ -239,6 +258,32 @@ describe ArticleJSON::Import::GoogleDoc::HTML::NodeAnalyzer do
     context 'when the node does not contain the text to start a quote' do
       let(:xml_fragment) { '<p><span>Foo Bar:</span></p>' }
       it { should be false }
+    end
+  end
+
+  describe '#br?' do
+    subject { node.br? }
+
+    context 'when the node is a <br> itself' do
+      let(:xml_fragment) { '<br>' }
+      it { should be true }
+    end
+
+    context 'when the node is a span' do
+      context 'and contains text' do
+        let(:xml_fragment) { '<span>Foo Bar:<br></p>' }
+        it { should be false }
+      end
+
+      context 'and only contains a linebreak' do
+        let(:xml_fragment) { '<span><br></p>' }
+        it { should be true }
+      end
+
+      context 'and only contains linebreaks and spaces' do
+        let(:xml_fragment) { '<span><br>  <br> </p>' }
+        it { should be true }
+      end
     end
   end
 

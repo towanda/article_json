@@ -3,15 +3,7 @@ module ArticleJSON
     module HTML
       module Elements
         class Heading < Base
-          def export
-            create_element(tag_name, @element.content)
-          end
-
-          private
-
-          def tag_name
-            "h#{@element.level}".to_sym
-          end
+          include ArticleJSON::Export::Common::HTML::Elements::Heading
         end
       end
     end

@@ -18,11 +18,29 @@ describe ArticleJSON::Import::GoogleDoc::HTML::ImageParser do
   let(:css) { '' }
   let(:source_url) { 'foo/bar.jpg' }
   let(:image_fragment) { "<p><span><img src=\"#{source_url}\"></span></p>" }
-  let(:caption_fragment) { '<p><span>foo</span></p>' }
+  let(:caption_text) { '[image-link-to: http://devex.com] foo' }
+  let(:caption_fragment) { "<p><span>#{caption_text}</span></p>" }
 
   describe '#source_url' do
     subject { element.source_url }
     it { should eq source_url }
+  end
+
+  describe '#alt' do
+    subject { element.alt }
+
+    context 'whithout an alt attribute' do
+      it { should eq '' }
+    end
+
+    context 'with an alt attribute' do
+      let(:alt_text) { 'Alternative text' }
+      let(:image_fragment) do
+        "<p><span><img src=\"#{source_url}\" alt=\"#{alt_text}\"></span></p>"
+      end
+
+      it { should eq alt_text }
+    end
   end
 
   describe '#float' do
@@ -144,10 +162,32 @@ describe ArticleJSON::Import::GoogleDoc::HTML::ImageParser do
     it 'returns a list of text elements' do
       expect(subject).to be_an Array
       expect(subject.size).to eq 1
-
       expect(subject).to all be_a ArticleJSON::Elements::Text
-
       expect(subject.first.content).to eq 'foo'
+    end
+
+    context 'when the caption nil' do
+      let(:caption_node) { nil }
+      it 'returns an empty list' do
+        expect(subject).to be_an Array
+        expect(subject).to be_empty
+      end
+    end
+
+    context 'when the caption is `[no-caption]`' do
+      let(:caption_text) { '[no-caption]' }
+      it 'returns an empty list' do
+        expect(subject).to be_an Array
+        expect(subject).to be_empty
+      end
+    end
+
+    context 'when the caption is `[image-link-to]` and `[no-caption]`' do
+      let(:caption_text) { '[image-link-to: http://devex.com][no-caption]' }
+      it 'returns an empty list' do
+        expect(subject).to be_an Array
+        expect(subject).to be_empty
+      end
     end
   end
 
@@ -160,6 +200,20 @@ describe ArticleJSON::Import::GoogleDoc::HTML::ImageParser do
       expect(subject.source_url).to eq source_url
       expect(subject.float).to be nil
       expect(subject.caption).to all be_a ArticleJSON::Elements::Text
+      expect(subject.href).to eq 'http://devex.com'
+    end
+
+    context 'with an image-link-to tag and a no-caption tag' do
+      let(:caption_text) { '[image-link-to: http://devex.com][no-caption]' }
+
+      it 'returns a proper Hash' do
+        expect(subject).to be_a ArticleJSON::Elements::Image
+        expect(subject.type).to eq :image
+        expect(subject.source_url).to eq source_url
+        expect(subject.float).to be nil
+        expect(subject.caption).to be_empty
+        expect(subject.href).to eq 'http://devex.com'
+      end
     end
   end
 end

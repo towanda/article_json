@@ -37,11 +37,12 @@ describe ArticleJSON::Export::HTML::Elements::Base do
       let(:source_element) do
         ArticleJSON::Elements::Image.new(
           source_url: '/foo/bar.jpg',
-          caption: [sample_text]
+          caption: [sample_text],
+          alt: 'Alt Text'
         )
       end
       let(:expected_html) do
-        '<figure><img src="/foo/bar.jpg">' \
+        '<figure><img src="/foo/bar.jpg" alt="Alt Text">' \
           '<figcaption>Foo Bar</figcaption></figure>'
       end
       it { should eq expected_html }
@@ -61,7 +62,10 @@ describe ArticleJSON::Export::HTML::Elements::Base do
           caption: [ArticleJSON::Elements::Text.new(content: 'Baz')]
         )
       end
-      it { should eq '<aside><p>Foo Bar</p><small>Baz</small></aside>' }
+      let(:expected_html) do
+        '<div class="quote"><p>Foo Bar</p><small>Baz</small></div>'
+      end
+      it { should eq expected_html }
     end
 
     context 'when the source element is an embedded element' do
@@ -73,8 +77,12 @@ describe ArticleJSON::Export::HTML::Elements::Base do
         )
       end
       let(:expected_html) do
-        '<figure><div class="embed">Embedded Object: something-666</div>' \
+        '<figure><div class="embed something">Embedded Object: something-666</div>' \
           '<figcaption>Foo Bar</figcaption></figure>'
+      end
+      let(:oembed_data) { { html: 'Embedded Object: something-666' } }
+      before do
+        allow(source_element).to receive(:oembed_data).and_return(oembed_data)
       end
       it { should eq expected_html }
     end
@@ -173,5 +181,21 @@ describe ArticleJSON::Export::HTML::Elements::Base do
       let(:element_type) { :embed }
       it { should be ArticleJSON::Export::HTML::Elements::Embed }
     end
+
+    context 'when the element was additionally registered' do
+      before do
+        ArticleJSON.configure do |c|
+          c.register_element_exporters(:html, foo: Object)
+        end
+      end
+      let(:element_type) { :foo }
+      it { should be Object }
+    end
+  end
+
+  describe '.namespace' do
+    subject { described_class.namespace }
+    it { should be_a Module }
+    it { should eq ArticleJSON::Export::HTML::Elements }
   end
 end

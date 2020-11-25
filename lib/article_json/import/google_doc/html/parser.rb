@@ -6,7 +6,12 @@ module ArticleJSON
           # @param [String] html
           def initialize(html)
             doc = Nokogiri::HTML(html)
-            @body_enumerator = doc.xpath('//body').last.children.to_enum
+            selection = if doc.xpath('//body/div').empty?
+                          doc.xpath('//body')
+                        else
+                          doc.xpath('//body/div')
+                        end
+            @body_enumerator = selection.last.children.to_enum
 
             css_node = doc.xpath('//head/style').last
             @css_analyzer = CSSAnalyzer.new(css_node&.inner_text)
@@ -53,11 +58,13 @@ module ArticleJSON
             HeadingParser.new(node: @current_node.node).element
           end
 
-          # @return [ArticleJSON::Elements::Paragraph]
+          # @return [ArticleJSON::Elements::Paragraph|nil]
           def parse_paragraph
-            ParagraphParser
-              .new(node: @current_node.node, css_analyzer: @css_analyzer)
-              .element
+            paragraph =
+              ParagraphParser
+                .new(node: @current_node.node, css_analyzer: @css_analyzer)
+                .element
+            paragraph unless paragraph.blank?
           end
 
           # @return [ArticleJSON::Elements::List]
@@ -72,7 +79,7 @@ module ArticleJSON
             ImageParser
               .new(
                 node: @current_node.node,
-                caption_node: @body_enumerator.next,
+                caption_node: next_node,
                 css_analyzer: @css_analyzer
               )
               .element
@@ -81,7 +88,11 @@ module ArticleJSON
           # @return [ArticleJSON::Elements::TextBox]
           def parse_text_box
             TextBoxParser
-              .new(nodes: nodes_until_hr, css_analyzer: @css_analyzer)
+              .new(
+                type_node: @current_node.node,
+                nodes: nodes_until_hr,
+                css_analyzer: @css_analyzer
+              )
               .element
           end
 
@@ -96,7 +107,7 @@ module ArticleJSON
           def parse_embed
             EmbeddedParser.build(
               node: @current_node.node,
-              caption_node: @body_enumerator.next,
+              caption_node: next_node,
               css_analyzer: @css_analyzer
             )
           end
@@ -105,10 +116,17 @@ module ArticleJSON
           # @return [Array[Nokogiri::HTML::Node]]
           def nodes_until_hr
             nodes = []
-            until NodeAnalyzer.new(@body_enumerator.peek).hr?
+            until !body_has_more_nodes? ||
+                NodeAnalyzer.new(@body_enumerator.peek).hr?
               nodes << @body_enumerator.next
             end
             nodes
+          end
+
+          # Return the next node if available, and advance the enumerator
+          # @return [Nokogiri::HTML::Node]
+          def next_node
+            body_has_more_nodes? ? @body_enumerator.next : nil
           end
 
           # @return [Boolean]

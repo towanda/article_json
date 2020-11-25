@@ -17,20 +17,29 @@ module ArticleJSON
             node.inner_text.strip.downcase == text.strip.downcase
           end
 
+          # Check if the node text begins with a certain text
+          # @param [String]
+          # @return [Boolean]
+          def begins_with?(text)
+            first_word = node.inner_text.strip.downcase.split(' ').first
+            first_word == text.strip.downcase
+          end
+
           # Check if the node is empty, i.e. not containing any text
           # Given that images are the only nodes without text, we have to make
           # sure that it's not an image.
           # @return [Boolean]
           def empty?
             return @is_empty if defined? @is_empty
-            @is_empty = node.inner_text.strip.empty? && !image? && !hr?
+            @is_empty = node.inner_text.strip.empty? && !image? && !hr? && !br?
           end
 
           # Check if the node is a header tag between <h1> and <h5>
           # @return [Boolean]
           def heading?
             return @is_heading if defined? @is_heading
-            @is_heading = %w(h1 h2 h3 h4 h5).include?(node.name)
+            @is_heading =
+              !quote? && !text_box? && %w(h1 h2 h3 h4 h5).include?(node.name)
           end
 
           # Check if the node is a horizontal line (i.e. `<hr>`)
@@ -64,7 +73,7 @@ module ArticleJSON
           # @return [Boolean]
           def text_box?
             return @is_text_box if defined? @is_text_box
-            @is_text_box = has_text?('textbox:') || has_text?('highlight:')
+            @is_text_box = begins_with?('textbox:') || begins_with?('highlight:')
           end
 
           # Check if the node starts a quote
@@ -89,6 +98,14 @@ module ArticleJSON
             @is_embed = EmbeddedParser.supported?(node)
           end
 
+          # Check if the node is a linebreak. A span only containing whitespaces
+          # and <br> tags is considered a linebreak.
+          # @return [Boolean]
+          def br?
+            return @is_br if defined? @is_br
+            @is_br = node.name == 'br' || only_includes_brs?
+          end
+
           # Determine the type of this node
           # The type is one of the elements supported by article_json.
           # @return [Symbol]
@@ -103,6 +120,19 @@ module ArticleJSON
             return :image if image?
             return :embed if embed?
             :unknown
+          end
+
+          private
+
+          # Return true if the node only contains <br> nodes and empty text
+          # @return [Boolean]
+          def only_includes_brs?
+            return false unless node.inner_text.strip.empty?
+            tags = node.children.map(&:name)
+            # Check if it only contains <br> and text nodes
+            return false unless tags.all? { |tag| %w(br text).include? tag }
+            # Check if at least one is a `<br>` node
+            tags.include?('br')
           end
         end
       end

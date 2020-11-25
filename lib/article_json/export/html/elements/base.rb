@@ -3,53 +3,24 @@ module ArticleJSON
     module HTML
       module Elements
         class Base
-          # @param [ArticleJSON::Elements::Base] element
-          def initialize(element)
-            @element = element
-          end
-
-          # Export a HTML node out of the given element
-          # Dynamically looks up the right export-element-class, instantiates it
-          # and then calls the #build method.
-          # @return [Nokogiri::HTML::Node]
-          def export
-            exporter = self.class == Base ? self.class.build(@element) : self
-            exporter.export unless exporter.nil?
-          end
-
-          private
-
-          def create_element(tag, *args)
-            Nokogiri::HTML.fragment('').document.create_element(tag.to_s, *args)
-          end
-
-          def create_text_node(text)
-            Nokogiri::HTML.fragment(text).children.first
-          end
+          include ArticleJSON::Export::Common::HTML::Elements::Base
 
           class << self
-            # Instantiate the correct sub class for a given element
-            # @param [ArticleJSON::Elements::Base] element
-            # @return [ArticleJSON::Export::HTML::Elements::Base]
-            def build(element)
-              klass = exporter_by_type(element.type)
-              klass.new(element) unless klass.nil?
+            # Return the module namespace this class and its subclasses are
+            # nested in
+            # @return [Module]
+            def namespace
+              ArticleJSON::Export::HTML::Elements
             end
 
-            # Look up the correct exporter class based on the element type
-            # @param [Symbol] type
-            # @return [ArticleJSON::Export::HTML::Elements::Base]
-            def exporter_by_type(type)
-              {
-                text: Text,
-                paragraph: Paragraph,
-                heading: Heading,
-                list: List,
-                image: Image,
-                text_box: TextBox,
-                quote: Quote,
-                embed: Embed,
-              }[type.to_sym]
+            private
+
+            # The format this exporter is returning. This is used to determine
+            # which custom element exporters should be applied from the
+            # configuration.
+            # @return [Symbol]
+            def export_format
+              :html
             end
           end
         end

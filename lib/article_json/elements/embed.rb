@@ -28,9 +28,14 @@ module ArticleJSON
       end
 
       # Obtain the oembed data for this embed element
-      # @return [Hash]
+      # @return [Hash|nil]
       def oembed_data
         oembed_resolver&.oembed_data
+      end
+
+      # @return [Array[ArticleJSON::Elements::Text]|nil]
+      def oembed_unavailable_message
+        oembed_resolver&.unavailable_message
       end
 
       private

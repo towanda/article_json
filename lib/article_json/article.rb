@@ -1,10 +1,26 @@
 module ArticleJSON
   class Article
-    attr_reader :elements
+    attr_reader :article_elements, :additional_elements
 
-    # @param [Arra[ArticleJSON::Elements::Base]] elements
+    # @param [Array[ArticleJSON::Elements::Base]] elements
     def initialize(elements)
-      @elements = elements
+      @article_elements = elements
+      @additional_elements = []
+    end
+
+    # All elements of this article with optional additional elements placed in
+    # between
+    # @return [Array[ArticleJSON::Elements::Base]]
+    def elements
+      @elements ||= begin
+        if @additional_elements.any?
+          ArticleJSON::Utils::AdditionalElementPlacer
+            .new(@article_elements, @additional_elements)
+            .merge_elements
+        else
+          @article_elements
+        end
+      end
     end
 
     # Hash representation of the article
@@ -12,7 +28,7 @@ module ArticleJSON
     def to_h
       {
         article_json_version: VERSION,
-        content: @elements.map(&:to_h),
+        content: elements.map(&:to_h),
       }
     end
 
@@ -22,10 +38,63 @@ module ArticleJSON
       to_h.to_json
     end
 
+    # Exporter instance for HTML
+    # @return [ArticleJSON::Export::HTML::Exporter]
+    def html_exporter
+      ArticleJSON::Export::HTML::Exporter.new(elements)
+    end
+
     # HTML export of the article
     # @return [String]
     def to_html
-      ArticleJSON::Export::HTML::Exporter.new(@elements).html
+      html_exporter.html
+    end
+
+    # Exporter instance for AMP
+    # @return [ArticleJSON::Export::AMP::Exporter]
+    def amp_exporter
+      ArticleJSON::Export::AMP::Exporter.new(elements)
+    end
+
+    # AMP export of the article
+    # @return [String]
+    def to_amp
+      amp_exporter.html
+    end
+
+    # Exporter instance for FacebookInstantArticle
+    # @return [ArticleJSON::Export::FacebookInstantArticle::Exporter]
+    def facebook_instant_article_exporter
+      ArticleJSON::Export::FacebookInstantArticle::Exporter.new(elements)
+    end
+
+    # FacebookInstantArticle export of the article
+    # @return [String]
+    def to_facebook_instant_article
+      facebook_instant_article_exporter.html
+    end
+
+    # Exporter instance for plain text
+    # @return [ArticleJSON::Export::PlainText::Exporter]
+    def plain_text_exporter
+      ArticleJSON::Export::PlainText::Exporter.new(elements)
+    end
+
+    # Plain text export of the article
+    # @return [String]
+    def to_plain_text
+      plain_text_exporter.text
+    end
+
+    # Distribute passed elements evenly throughout the article. All passed
+    # elements need to have an exporter to be represented in the rendered
+    # article. If the method is called multiple times, the order of additional
+    # elements is maintained.
+    # @param [Object] additional_elements
+    def place_additional_elements(additional_elements)
+      # Reset the `#elements` method memoization
+      @elements = nil
+      @additional_elements.concat(additional_elements)
     end
 
     class << self
